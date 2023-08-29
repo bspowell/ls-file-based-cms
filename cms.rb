@@ -33,11 +33,68 @@ def load_file_content(path)
 end
 
 get "/" do
-  pattern = File.join(data_path, "*")
-  @files = Dir.glob(pattern).map do |path|  # dir.glob gives back an array
-    File.basename(path)
+  # if session[:username]
+    pattern = File.join(data_path, "*")
+    @files = Dir.glob(pattern).map do |path|  # dir.glob gives back an array
+      File.basename(path)
+    end
+    erb :index
+  # else
+  #   redirect "/users/signin"
+  # end
+end
+
+get "/users/signin" do 
+  erb :signin
+end
+
+post "/users/signin" do
+  if params[:username] == "admin" && params[:password] == "secret"
+    session[:username] = params[:username]
+    session[:message] = "Welcome"
+    redirect "/"
+  else
+    session[:message] = "Invalid credentials"
+    status 422
+    erb :signin
   end
-  erb :index
+end
+
+post "/users/signout" do
+  session.delete(:username)
+  session[:message] = "You have been signed out."
+  redirect "/"
+end
+
+get "/new" do
+  erb :new
+end
+
+post "/:filename/delete" do
+  file_path = File.join(data_path, params[:filename])
+  File.delete(file_path)
+
+  session[:message] = "#{params[:filename]} has been deleted."
+  redirect "/"
+end
+
+post "/create" do
+  file_name = params[:filename].to_s
+
+  if file_name.strip.empty?
+    session[:message] = "A name is required"
+    status 422
+    erb :new
+  elsif File.extname(file_name).empty?
+    session[:message] = "An extension is required"
+    status 422
+    erb :new
+  else
+    file_path = File.join(data_path, file_name)
+    File.write(file_path, "")
+    session[:message] = "#{file_name} has been created."
+    redirect "/"
+  end
 end
 
 get "/:filename" do
@@ -65,6 +122,7 @@ post "/:filename" do
 
   File.write(file_path, params[:content])
 
-  session[:message] = "#{params[:filename]} is now updated"
+  session[:message] = "#{params[:filename]} has been updated"
   redirect "/"
 end
+
